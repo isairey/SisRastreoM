@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tracker Chofer - ARBE Transportes</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#2c3e50">
+    <meta name="description" content="Aplicación de rastreo para choferes de ARBE Transportes">
+    <link rel="apple-touch-icon" href="/icon.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex flex-col items-center min-h-screen p-6">
+    <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+        <div class="flex justify-center mb-6">
+            <img src="ARBE_TRANSPORTES.png" alt="Logo ARBE" class="w-32">
+        </div>
+        <h1 class="text-2xl font-semibold text-gray-800 mb-4 text-center">Tracker de Chofer</h1>
+        <div class="mb-4">
+            <label for="deviceId" class="block text-sm font-medium text-gray-700">ID de Dispositivo</label>
+            <input type="text" id="deviceId" placeholder="Ej: 001" class="w-full p-2 mt-1 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <button id="btnStartTrip" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded transition duration-300 mb-2">Iniciar Viaje y Rastreo</button>
+        <button id="btnEndTrip" class="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded transition duration-300" disabled>Finalizar Viaje</button>
+        <p class="mt-4 text-sm text-gray-700">Estado: <span id="status" class="font-semibold text-red-600">Desconectado</span></p>
+        <p id="error" class="mt-2 text-sm text-red-600"></p>
+        <p class="mt-2 text-sm text-gray-700">Ubicación: <span id="location">Esperando...</span></p>
+        <p class="mt-2 text-sm text-gray-700">Velocidad: <span id="speed">0 km/h</span></p>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script>
+        let socket;
+        let deviceId;
+        let trackingInterval;
+
+        const serverUrl = 'https://sistema-rastreo.onrender.com';
+        const apiBaseUrl = serverUrl;
+        const socketUrl = serverUrl;
+
+        // Verificar conexión a internet
+        function checkInternetConnection() {
+            return navigator.onLine;
+        }
+
+        // Obtener ubicación basada en IP como respaldo
+        async function getLocationFromIP() {
+            try {
+                const response = await fetch('http://ip-api.com/json');
+                const data = await response.json();
+                if (data.status === 'success') {
+                    return {
+                        lat: data.lat,
+                        lng: data.lon,
+                        speed: 0 // No se puede obtener velocidad con IP
+                    };
+                } else {
+                    throw new Error('No se pudo obtener la ubicación basada en IP');
+                }
+            } catch (error) {
+                console.error('Error al obtener ubicación basada en IP:', error);
+                return null;
+            }
+        }
+
+        function startTracking() {
+            deviceId = document.getElementById('deviceId').value;
+            if (!deviceId) {
+                alert('Por favor ingrese un ID de dispositivo');
+                return;
+            }
+
+            // Verificar conexión a internet
+            if (!checkInternetConnection()) {
+                alert('No hay conexión a internet. Por favor, conecta tu dispositivo a datos móviles o Wi-Fi.');
+                return;
+            }
+
+            socket = io(socketUrl, {
+                timeout: 30000 // Aumentar el tiempo de espera a 30 segundos
+            });
+            document.getElementById('status').textContent = 'Conectado';
+            document.getElementById('status').classList.remove('text-red-600');
+            document.getElementById('status').classList.add('text-green-600');
+
+            socket.on('connect', () => {
+                console.log('Conectado al servidor');
+                socket.emit('registerDevice', deviceId);
+            });
+
+            socket.on('connect_error', (error) => {
+                console.error('Error de conexión:', error);
+                document.getElementById('status').textContent = 'Error';
+                document.getElementById('status').classList.remove('text-green-600');
+                document.getElementById('status').classList.add('text-red-600');
+            });
+
+            socket.on('startTrip', () => {
+                alert('Viaje iniciado por el administrador');
+            });
+
+            socket.on('endTrip', () => {
+                alert('Viaje finalizado por el administrador');
+            });
+
+            socket.on('driverAlert', (message) => {
+                alert(message);
+            });
+
+            // Iniciar rastreo cada 2 segundos
+            trackingInterval = setInterval(trackLocation, 2000);
+        }
+
+        async function trackLocation() {
+            // Verificar conexión a internet
+            if (!checkInternetConnection()) {
+                document.getElementById('error').textContent = 'Sin conexión a internet. Por favor, verifica tu conexión.';
+                return;
+            }
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        const speed = position.coords.speed ? (position.coords.speed * 3.6).toFixed(1) : 0;
+                        document.getElementById('location').textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                        document.getElementById('speed').textContent = `${speed} km/h`;
+                        console.log(`Enviando ubicación: ${lat}, ${lng} para ${deviceId}, velocidad: ${speed}`);
+                        sendLocation(lat, lng, speed);
+                    },
+                    async (error) => {
+                        console.error('Error al obtener geolocalización:', error);
+                        document.getElementById('error').textContent = 'Error de geolocalización: ' + error.message;
+
+                        // Intentar obtener ubicación basada en IP como respaldo
+                        const ipLocation = await getLocationFromIP();
+                        if (ipLocation) {
+                            const { lat, lng, speed } = ipLocation;
+                            document.getElementById('location').textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)} (basado en IP)`;
+                            document.getElementById('speed').textContent = `${speed} km/h`;
+                            console.log(`Enviando ubicación basada en IP: ${lat}, ${lng} para ${deviceId}`);
+                            sendLocation(lat, lng, speed);
+                        } else {
+                            document.getElementById('error').textContent = 'No se pudo obtener la ubicación. Verifica tu conexión y permisos de geolocalización.';
+                        }
+                    },
+                    { enableHighAccuracy: true, maximumAge: 0, timeout: 3000 } // Reducir timeout a 3 segundos
+                );
+            } else {
+                alert('Geolocalización no soportada por este navegador');
+            }
+        }
+
+        function sendLocation(lat, lng, speed) {
+            fetch(`${apiBaseUrl}/api/location`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ deviceId, lat, lng, speed })
+            })
+            .then(response => {
+                if (!response.ok) throw new Error(`Error ${response.status}: ${response.statusText}`);
+                return response.json();
+            })
+            .then(data => {
+                if (data.status === 'success') {
+                    console.log('Ubicación enviada');
+                    document.getElementById('error').textContent = '';
+                } else {
+                    document.getElementById('error').textContent = 'Error: ' + (data.error || 'Desconocido');
+                }
+            })
+            .catch(error => {
+                console.error('Error al enviar ubicación:', error);
+                document.getElementById('error').textContent = 'Error: ' + error.message;
+            });
+        }
+
+        function endTracking() {
+            if (trackingInterval) {
+                clearInterval(trackingInterval);
+                socket.emit('endTrip', deviceId);
+                document.getElementById('btnStartTrip').disabled = false;
+                document.getElementById('btnEndTrip').disabled = true;
+                document.getElementById('status').textContent = 'Desconectado';
+                document.getElementById('status').classList.remove('text-green-600');
+                document.getElementById('status').classList.add('text-red-600');
+                alert('Viaje finalizado');
+            }
+        }
+
+        document.getElementById('btnStartTrip').addEventListener('click', () => {
+            startTracking();
+            document.getElementById('btnStartTrip').disabled = true;
+            document.getElementById('btnEndTrip').disabled = false;
+            socket.emit('startTrip', deviceId);
+            alert('Viaje iniciado');
+        });
+
+        document.getElementById('btnEndTrip').addEventListener('click', endTracking);
+
+        window.onbeforeunload = () => {
+            if (trackingInterval) clearInterval(trackingInterval);
+        };
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/service-worker.js')
+                .then(registration => console.log('Service Worker registrado:', registration))
+                .catch(error => console.error('Error al registrar Service Worker:', error));
+        }
+    </script>
+</body>
+</html>

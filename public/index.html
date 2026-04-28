@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARBE Tracking Dashboard</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F5F5F5;
+        }
+        .sidebar {
+            background-color: #1A3C34;
+            color: #FFFFFF;
+            box-shadow: 4px 0 12px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+        .sidebar select, .sidebar button {
+            background-color: #FFFFFF;
+            color: #1A3C34;
+            border: 1px solid #D3D3D3;
+            border-radius: 8px;
+            padding: 10px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .sidebar button {
+            background-color: #1A3C34;
+            color: #FFFFFF;
+            margin-top: 12px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+        .sidebar button:hover {
+            background-color: #2A5A4E;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+        #map {
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        #status-panel, #alert-log, #location-history, #routePanel {
+            background-color: #FFFFFF;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border: 1px solid #D3D3D3;
+            color: #4A4A4A;
+        }
+        #status-panel p, #alert-log h3, #location-history h3, #routePanel h3 {
+            color: #1A3C34;
+        }
+        #connection-status.text-green-600 {
+            color: #1A3C34 !important;
+        }
+        #connection-status.text-red-600 {
+            color: #EF4444 !important;
+        }
+        .toggle-button {
+            background-color: #1A3C34;
+            color: #FFFFFF;
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        .toggle-button:hover {
+            background-color: #2A5A4E;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+        #location-history table th, #location-history table td {
+            border-color: #D3D3D3;
+            padding: 8px;
+            font-size: 14px;
+        }
+        #location-history table th {
+            background-color: #F5F5F5;
+            color: #1A3C34;
+            font-weight: 600;
+        }
+        #routePanel input, #routePanel select {
+            background-color: #F5F5F5;
+            border: 1px solid #D3D3D3;
+            border-radius: 8px;
+            padding: 10px;
+            color: #4A4A4A;
+        }
+        #routePanel button {
+            background-color: #1A3C34;
+            color: #FFFFFF;
+            border-radius: 8px;
+            padding: 10px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        #routePanel button:hover {
+            background-color: #2A5A4E;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+        .suggestions {
+            border: 1px solid #D3D3D3;
+            border-radius: 0 0 8px 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .suggestions div:hover {
+            background-color: #F5F5F5;
+        }
+        #alert-log {
+            position: absolute;
+            bottom: 60px;
+            right: 16px;
+            max-height: 40vh;
+            width: 90%;
+            max-width: 400px;
+            overflow-y: auto;
+            z-index: 1100;
+            padding: 16px;
+        }
+        #alert-log.hidden {
+            max-height: 0;
+            opacity: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        #toggleAlertLogBtn {
+            position: absolute;
+            bottom: 16px;
+            right: 16px;
+        }
+        #location-history {
+            position: absolute;
+            bottom: 60px;
+            left: 16px;
+            max-height: 40vh;
+            width: 90%;
+            max-width: 400px;
+            overflow-y: auto;
+            z-index: 1100;
+            padding: 16px;
+        }
+        #location-history.hidden {
+            max-height: 0;
+            opacity: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        #toggleHistoryBtn {
+            position: absolute;
+            bottom: 16px;
+            left: 16px;
+        }
+        #routePanel {
+            position: absolute;
+            top: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 16px;
+            z-index: 1000;
+            max-width: 400px;
+            display: none;
+        }
+        #routePanel.active {
+            display: block;
+        }
+        .suggestions {
+            position: absolute;
+            background: white;
+            border-top: none;
+            max-height: 200px;
+            overflow-y: auto;
+            width: 100%;
+            z-index: 1001;
+            display: none;
+        }
+        @media (max-width: 768px) {
+            #alert-log, #location-history {
+                width: 80%;
+                max-height: 30vh;
+                bottom: 70px;
+            }
+            #toggleAlertLogBtn, #toggleHistoryBtn {
+                bottom: 10px;
+                padding: 6px 12px;
+                font-size: 14px;
+            }
+            .sidebar {
+                width: 200px;
+            }
+        }
+        @media (max-width: 480px) {
+            #alert-log, #location-history {
+                width: 90%;
+                max-height: 25vh;
+            }
+            .sidebar {
+                width: 180px;
+            }
+            #status-panel {
+                top: 10px;
+                right: 10px;
+                padding: 8px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body class="flex min-h-screen">
+    <!-- Sidebar -->
+    <div class="sidebar w-64 p-6 flex flex-col items-center">
+        <img src="ARBE_TRANSPORTES.png" alt="Logo ARBE" class="w-32 mb-6">
+        <select id="deviceSelect" class="w-full">
+            <option value="">Selecciona un chofer</option>
+        </select>
+        <button id="btnRefreshDevices">Actualizar Choferes</button>
+        <button id="btnCenterMap">Centrar Mapa</button>
+        <button id="btnToggleMapStyle">Cambiar Modo Mapa</button>
+        <button id="btnExportCSV">Exportar Historial (CSV)</button>
+        <button id="btnAssignRoute">Asignar Ruta</button>
+        <button id="btnClearInactive">Limpiar Inactivos</button>
+        <div class="mt-6 text-center">
+            <p class="text-sm">Velocidad Actual: <span id="speed">0 km/h</span></p>
+        </div>
+    </div>
+
+    <!-- Map Container -->
+    <div class="flex-1 p-6 relative">
+        <div id="map" class="w-full h-[calc(100vh-3rem)]"></div>
+        <div id="status-panel" class="absolute top-4 right-4 p-4">
+            <p>Estado: <span id="connection-status" class="font-semibold text-green-600">Desconectado</span></p>
+            <p>Dispositivos: <span id="device-count" class="font-semibold">0</span></p>
+            <p>Última Ubicación: <span id="last-location" class="font-semibold">Esperando...</span></p>
+        </div>
+        <div id="alert-log" class="absolute">
+            <h3 class="text-lg font-semibold mb-2">Registro de Alertas</h3>
+            <div id="alertLogEntries"></div>
+        </div>
+        <button id="toggleAlertLogBtn" class="toggle-button">Ocultar Alertas</button>
+        <div id="location-history" class="absolute hidden">
+            <h3 class="text-lg font-semibold mb-2">Historial de Ubicaciones</h3>
+            <table class="w-full text-sm text-gray-700">
+                <thead>
+                    <tr>
+                        <th class="border-b py-1">Ubicación</th>
+                        <th class="border-b py-1">Velocidad</th>
+                        <th class="border-b py-1">Fecha/Hora</th>
+                    </tr>
+                </thead>
+                <tbody id="locationHistoryTable"></tbody>
+            </table>
+        </div>
+        <button id="toggleHistoryBtn" class="toggle-button">Mostrar Historial</button>
+        <div id="routePanel" class="routePanel">
+            <h3 class="text-lg font-semibold mb-2">Asignar Ruta</h3>
+            <select id="routeDeviceSelect" class="w-full p-2 mb-2">
+                <option value="">Selecciona un chofer</option>
+            </select>
+            <input type="text" id="routeName" placeholder="Nombre de la ruta (ej: Ruta 1)" class="w-full p-2 mb-2">
+            <div id="destinationsContainer">
+                <div class="destination-row mb-2">
+                    <input type="text" id="destination1" placeholder="Destino 1 (busca por nombre)" class="w-full p-2 mb-1 autocomplete" oninput="fetchSuggestions(this)">
+                    <div id="suggestions1" class="suggestions"></div>
+                    <button type="button" class="add-destination">Agregar Destino</button>
+                </div>
+            </div>
+            <button id="btnSaveRoute" class="w-full mt-2">Guardar Ruta</button>
+            <button id="btnCloseRoutePanel" class="mt-2">Cerrar</button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <!-- Cargador dinámico de Google Maps -->
+    <script>
+        (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.${c}apis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})({
+            key: "AIzaSyD-jiDxqTS_5ey5hr9WdaUO3AJ0Q4N_-MM",
+            v: "weekly"
+        });
+    </script>
+    <script>
+        let map;
+        let markers = {};
+        let infoWindows = {};
+        let selectedDevice = null;
+        let socket;
+        let isDarkMode = false;
+        let deviceNames = {};
+        let destinationMarkers = {};
+        let currentDestinations = {};
+        let directionsService;
+        let directionsRenderer;
+        let lastUpdateTimes = {};
+        let lastLocationNames = {};
+        let lastLocations = {};
+
+        const serverUrl = 'https://sistema-rastreo.onrender.com';
+        const apiBaseUrl = serverUrl;
+        const socketUrl = serverUrl;
+
+        // Configuración del caché
+        const CACHE_KEY = 'locationCache';
+        const CACHE_LIMIT = 1000;
+        const CACHE_EXPIRY = 24 * 60 * 60 * 1000;
+
+        // Clave para almacenar el dispositivo seleccionado en localStorage
+        const SELECTED_DEVICE_KEY = 'selectedDevice';
+
+        // Tiempo máximo (en milisegundos) para considerar un dispositivo como activo (5 minutos)
+        const ACTIVE_DEVICE_THRESHOLD = 5 * 60 * 1000;
+
+        function getLocationCache() {
+            const cache = localStorage.getItem(CACHE_KEY);
+            return cache ? JSON.parse(cache) : {};
+        }
+
+        function saveLocationCache(cache) {
+            const entries = Object.entries(cache);
+            if (entries.length > CACHE_LIMIT) {
+                const sortedEntries = entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
+                const newCache = Object.fromEntries(sortedEntries.slice(-CACHE_LIMIT));
+                localStorage.setItem(CACHE_KEY, JSON.stringify(newCache));
+            } else {
+                localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+            }
+        }
+
+        function cleanExpiredCache() {
+            const cache = getLocationCache();
+            const now = Date.now();
+            const updatedCache = {};
+
+            for (const [key, value] of Object.entries(cache)) {
+                if (now - value.timestamp < CACHE_EXPIRY) {
+                    updatedCache[key] = value;
+                }
+            }
+
+            saveLocationCache(updatedCache);
+        }
+
+        async function getPlaceName(lat, lng, retries = 2) {
+            const latKey = lat.toFixed(6);
+            const lngKey = lng.toFixed(6);
+            const cacheKey = `${latKey},${lngKey}`;
+            const cache = getLocationCache();
+
+            if (cache[cacheKey]) {
+                const cachedEntry = cache[cacheKey];
+                const now = Date.now();
+                if (now - cachedEntry.timestamp < CACHE_EXPIRY) {
+                    console.log(`Ubicación obtenida del caché para ${cacheKey}: ${cachedEntry.placeName}`);
+                    return cachedEntry.placeName;
+                } else {
+                    console.log(`Entrada expirada en el caché para ${cacheKey}`);
+                    delete cache[cacheKey];
+                    saveLocationCache(cache);
+                }
+            }
+
+            if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+                console.error(`Coordenadas inválidas: lat=${lat}, lng=${lng}`);
+                return "Ubicación desconocida (coordenadas inválidas)";
+            }
+
+            for (let i = 0; i <= retries; i++) {
+                try {
+                    console.log(`Solicitando nombre del lugar a Google Maps para ${lat}, ${lng} (intento ${i + 1}/${retries + 1})`);
+                    const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=AIzaSyD-jiDxqTS_5ey5hr9WdaUO3AJ0Q4N_-MM`);
+                    if (!response.ok) {
+                        throw new Error(`Error ${response.status}: ${response.statusText}`);
+                    }
+                    const data = await response.json();
+                    let placeName = "Ubicación desconocida";
+
+                    if (data.status === "OK" && data.results && data.results.length > 0) {
+                        placeName = data.results[0].formatted_address;
+                        console.log(`Nombre del lugar obtenido de Google Maps: ${placeName}`);
+                    } else {
+                        console.log(`No se encontraron resultados en Google Maps para ${lat}, ${lng}. Estado: ${data.status}`);
+                        throw new Error(`No se encontraron resultados. Estado: ${data.status}`);
+                    }
+
+                    cache[cacheKey] = {
+                        placeName: placeName,
+                        timestamp: Date.now()
+                    };
+                    saveLocationCache(cache);
+                    return placeName;
+                } catch (error) {
+                    console.error(`Error al obtener el nombre del lugar de Google Maps para ${lat}, ${lng} (intento ${i + 1}/${retries + 1}):`, error.message);
+                    if (i === retries) {
+                        console.log(`Intentando con API alternativa (Nominatim) para ${lat}, ${lng}`);
+                        try {
+                            const nominatimResponse = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
+                            if (!nominatimResponse.ok) {
+                                throw new Error(`Error ${nominatimResponse.status}: ${nominatimResponse.statusText}`);
+                            }
+                            const nominatimData = await nominatimResponse.json();
+                            let placeName = "Ubicación desconocida";
+
+                            if (nominatimData && nominatimData.display_name) {
+                                placeName = nominatimData.display_name;
+                                console.log(`Nombre del lugar obtenido de Nominatim: ${placeName}`);
+                            } else {
+                                console.log(`No se encontraron resultados en Nominatim para ${lat}, ${lng}`);
+                            }
+
+                            cache[cacheKey] = {
+                                placeName: placeName,
+                                timestamp: Date.now()
+                            };
+                            saveLocationCache(cache);
+                            return placeName;
+                        } catch (nominatimError) {
+                            console.error(`Error al obtener el nombre del lugar de Nominatim para ${lat}, ${lng}:`, nominatimError.message);
+                            return "Ubicación desconocida (error en APIs)";
+                        }
+                    }
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+            }
+        }
+
+        async function initMap() {
+            try {
+                await google.maps.importLibrary("maps");
+
+                map = new google.maps.Map(document.getElementById('map'), {
+                    center: { lat: 19.4326, lng: -99.1332 },
+                    zoom: 15,
+                    styles: getMapStyle()
+                });
+
+                const carIcon = { url: 'https://maps.google.com/mapfiles/kml/shapes/truck.png', scaledSize: new google.maps.Size(32, 32) };
+                directionsService = new google.maps.DirectionsService();
+                directionsRenderer = new google.maps.DirectionsRenderer({ suppressMarkers: true });
+
+                socket = io(socketUrl, {
+                    timeout: 30000
+                });
+
+                socket.on('connect', async () => {
+                    console.log('Conectado al servidor');
+                    document.getElementById('connection-status').textContent = 'Conectado';
+                    document.getElementById('connection-status').classList.remove('text-red-600');
+                    document.getElementById('connection-status').classList.add('text-green-600');
+                    await refreshDevices();
+                    await loadInitialLocations();
+                });
+
+                socket.on('connect_error', (error) => {
+                    console.error('Error de conexión:', error);
+                    document.getElementById('connection-status').textContent = 'Desconectado';
+                    document.getElementById('connection-status').classList.remove('text-green-600');
+                    document.getElementById('connection-status').classList.add('text-red-600');
+                });
+
+                socket.on('updateLocation', async (location) => {
+                    const { device_id, lat, lng, speed, placeName } = location;
+                    lastUpdateTimes[device_id] = Date.now();
+                    lastLocations[device_id] = { lat, lng };
+
+                    let finalPlaceName = placeName;
+                    if (!finalPlaceName) {
+                        finalPlaceName = await getPlaceName(lat, lng);
+                    }
+                    lastLocationNames[device_id] = finalPlaceName;
+
+                    if (!markers[device_id]) {
+                        const deviceName = deviceNames[device_id] || `Unidad ${device_id}`;
+                        markers[device_id] = new google.maps.Marker({
+                            position: { lat, lng },
+                            map: map,
+                            title: deviceName,
+                            icon: carIcon,
+                        });
+                        infoWindows[device_id] = new google.maps.InfoWindow({
+                            content: deviceName,
+                        });
+                        infoWindows[device_id].open(map, markers[device_id]);
+                    } else {
+                        markers[device_id].setPosition({ lat, lng });
+                        infoWindows[device_id].setPosition({ lat, lng });
+                    }
+
+                    if (device_id === selectedDevice) {
+                        map.panTo({ lat, lng });
+                        document.getElementById('last-location').textContent = finalPlaceName;
+                    }
+                    document.getElementById('speed').textContent = `${speed || 0} km/h`;
+                    updateLocationHistory(device_id);
+                    checkDestinationReached(device_id, lat, lng);
+                });
+
+                socket.on('adminAlert', (alert) => {
+                    const { deviceId, message } = alert;
+                    addAlertToLog(message);
+                });
+
+                socket.on('tripStarted', (deviceId) => {
+                    addAlertToLog(`Viaje iniciado para ${deviceId}`);
+                    if (currentDestinations[deviceId]) plotRoute(deviceId, currentDestinations[deviceId]);
+                });
+
+                socket.on('tripEnded', (deviceId) => {
+                    addAlertToLog(`Viaje finalizado para ${deviceId}`);
+                    if (markers[deviceId]) markers[deviceId].setMap(null);
+                    if (infoWindows[deviceId]) infoWindows[deviceId].close();
+                    if (directionsRenderer.getMap()) directionsRenderer.setMap(null);
+                    delete markers[deviceId];
+                    delete infoWindows[deviceId];
+                });
+
+                selectedDevice = localStorage.getItem(SELECTED_DEVICE_KEY) || null;
+
+                document.getElementById('deviceSelect').addEventListener('change', (e) => {
+                    selectedDevice = e.target.value;
+                    localStorage.setItem(SELECTED_DEVICE_KEY, selectedDevice);
+                    if (markers[selectedDevice]) map.panTo(markers[selectedDevice].getPosition());
+                    document.getElementById('last-location').textContent = lastLocationNames[selectedDevice] || 'Esperando...';
+                    updateLocationHistory(selectedDevice);
+                    loadExistingRoutes(selectedDevice);
+                    const historyPanel = document.getElementById('location-history');
+                    const toggleBtn = document.getElementById('toggleHistoryBtn');
+                    historyPanel.classList.remove('hidden');
+                    toggleBtn.textContent = 'Ocultar Historial';
+                });
+
+                document.getElementById('btnRefreshDevices').addEventListener('click', refreshDevices);
+                document.getElementById('btnCenterMap').addEventListener('click', centerMap);
+                document.getElementById('btnToggleMapStyle').addEventListener('click', toggleMapStyle);
+                document.getElementById('btnExportCSV').addEventListener('click', exportToCSV);
+                document.getElementById('btnAssignRoute').addEventListener('click', toggleRoutePanel);
+                document.getElementById('btnSaveRoute').addEventListener('click', saveRoute);
+                document.getElementById('btnCloseRoutePanel').addEventListener('click', toggleRoutePanel);
+                document.getElementById('btnClearInactive').addEventListener('click', clearInactiveDevices);
+
+                cleanExpiredCache();
+            } catch (error) {
+                console.error('Error al inicializar el mapa:', error);
+                alert('Error al cargar el mapa. Revisa la consola para más detalles.');
+            }
+        }
+
+        async function loadInitialLocations() {
+            try {
+                const devicesResponse = await fetch(`${apiBaseUrl}/api/devices`);
+                const devices = await devicesResponse.json();
+                const now = Date.now();
+
+                for (const device of devices) {
+                    const deviceId = device.device_id;
+                    const deviceName = device.name;
+                    deviceNames[deviceId] = deviceName;
+
+                    const locationResponse = await fetch(`${apiBaseUrl}/api/locations?deviceId=${deviceId}&limit=1`);
+                    const locations = await locationResponse.json();
+
+                    if (locations.length > 0) {
+                        const latestLocation = locations[0];
+                        const { lat, lng, speed, timestamp } = latestLocation;
+                        const locationTime = new Date(timestamp).getTime();
+
+                        // Solo mostrar dispositivos que hayan enviado una actualización en los últimos 5 minutos
+                        if (now - locationTime <= ACTIVE_DEVICE_THRESHOLD) {
+                            lastUpdateTimes[deviceId] = locationTime;
+                            lastLocations[deviceId] = { lat, lng };
+                            const placeName = await getPlaceName(lat, lng);
+                            lastLocationNames[deviceId] = placeName;
+
+                            markers[deviceId] = new google.maps.Marker({
+                                position: { lat, lng },
+                                map: map,
+                                title: deviceName,
+                                icon: { url: 'https://maps.google.com/mapfiles/kml/shapes/truck.png', scaledSize: new google.maps.Size(32, 32) },
+                            });
+
+                            infoWindows[deviceId] = new google.maps.InfoWindow({
+                                content: deviceName,
+                            });
+                            infoWindows[deviceId].open(map, markers[deviceId]);
+
+                            if (deviceId === selectedDevice) {
+                                map.panTo({ lat, lng });
+                                document.getElementById('last-location').textContent = placeName;
+                                document.getElementById('speed').textContent = `${speed || 0} km/h`;
+                                updateLocationHistory(deviceId);
+                                loadExistingRoutes(deviceId);
+                            }
+                        } else {
+                            console.log(`Dispositivo ${deviceId} no está activo (última actualización: ${new Date(locationTime).toLocaleString()})`);
+                        }
+                    }
+                }
+
+                if (selectedDevice) {
+                    const select = document.getElementById('deviceSelect');
+                    select.value = selectedDevice;
+                    const historyPanel = document.getElementById('location-history');
+                    const toggleBtn = document.getElementById('toggleHistoryBtn');
+                    historyPanel.classList.remove('hidden');
+                    toggleBtn.textContent = 'Ocultar Historial';
+                }
+            } catch (error) {
+                console.error('Error al cargar ubicaciones iniciales:', error);
+                addAlertToLog('Error al cargar ubicaciones iniciales: ' + error.message);
+            }
+        }
+
+        async function clearInactiveDevices() {
+            try {
+                const now = Date.now();
+                const inactiveDevices = [];
+
+                for (const deviceId in lastUpdateTimes) {
+                    if (now - lastUpdateTimes[deviceId] > ACTIVE_DEVICE_THRESHOLD) {
+                        inactiveDevices.push(deviceId);
+                    }
+                }
+
+                for (const deviceId of inactiveDevices) {
+                    if (markers[deviceId]) {
+                        markers[deviceId].setMap(null);
+                        delete markers[deviceId];
+                    }
+                    if (infoWindows[deviceId]) {
+                        infoWindows[deviceId].close();
+                        delete infoWindows[deviceId];
+                    }
+                    delete lastUpdateTimes[deviceId];
+                    delete lastLocations[deviceId];
+                    delete lastLocationNames[deviceId];
+                    addAlertToLog(`Dispositivo inactivo ${deviceNames[deviceId] || deviceId} eliminado del mapa`);
+                }
+
+                // Opcional: Enviar solicitud al servidor para limpiar datos antiguos
+                await fetch(`${apiBaseUrl}/api/clearInactive`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ threshold: ACTIVE_DEVICE_THRESHOLD })
+                });
+
+                addAlertToLog('Dispositivos inactivos limpiados');
+            } catch (error) {
+                console.error('Error al limpiar dispositivos inactivos:', error);
+                addAlertToLog('Error al limpiar dispositivos inactivos: ' + error.message);
+            }
+        }
+
+        function getMapStyle() {
+            return isDarkMode ? [
+                { elementType: "geometry", stylers: [{ color: "#1A3C34" }] },
+                { elementType: "labels.text.stroke", stylers: [{ color: "#1A3C34" }] },
+                { elementType: "labels.text.fill", stylers: [{ color: "#D3D3D3" }] },
+                { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#FFFFFF" }] },
+                { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#FFFFFF" }] },
+                { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#2A5A4E" }] },
+                { featureType: "road", elementType: "geometry", stylers: [{ color: "#4A4A4A" }] },
+                { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#D3D3D3" }] },
+                { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#FFFFFF" }] },
+                { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] },
+            ] : [];
+        }
+
+        async function refreshDevices() {
+            try {
+                const response = await fetch(`${apiBaseUrl}/api/devices`);
+                const devices = await response.json();
+                const select = document.getElementById('deviceSelect');
+                const routeSelect = document.getElementById('routeDeviceSelect');
+                select.innerHTML = '<option value="">Selecciona un chofer</option>';
+                routeSelect.innerHTML = '<option value="">Selecciona un chofer</option>';
+                devices.forEach(device => {
+                    const option = document.createElement('option');
+                    const routeOption = document.createElement('option');
+                    option.value = device.device_id;
+                    routeOption.value = device.device_id;
+                    option.textContent = `${device.name} (${device.device_id})`;
+                    routeOption.textContent = `${device.name} (${device.device_id})`;
+                    select.appendChild(option);
+                    routeSelect.appendChild(routeOption);
+                    deviceNames[device.device_id] = device.name;
+                });
+                document.getElementById('device-count').textContent = devices.length;
+
+                if (selectedDevice) {
+                    select.value = selectedDevice;
+                }
+            } catch (error) {
+                console.error('Error al actualizar choferes:', error);
+                addAlertToLog('Error al cargar choferes: ' + error.message);
+            }
+        }
+
+        function addAlertToLog(message) {
+            const logEntries = document.getElementById('alertLogEntries');
+            const p = document.createElement('p');
+            p.className = 'text-sm text-gray-700';
+            const now = new Date();
+            const localTimeString = now.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+            const localDateString = now.toLocaleDateString('es-MX', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+            p.textContent = `${localTimeString} - ${message} [Registrado: ${localDateString} ${localTimeString}]`;
+            logEntries.appendChild(p);
+            logEntries.parentElement.scrollTop = logEntries.parentElement.scrollHeight;
+        }
+
+        function centerMap() {
+            if (selectedDevice && markers[selectedDevice]) {
+                map.panTo(markers[selectedDevice].getPosition());
+                map.setZoom(15);
+                addAlertToLog(`Mapa centrado en ${selectedDevice}`);
+            } else {
+                alert('Selecciona un dispositivo primero');
+            }
+        }
+
+        function toggleMapStyle() {
+            isDarkMode = !isDarkMode;
+            map.setOptions({ styles: getMapStyle() });
+            document.getElementById('btnToggleMapStyle').textContent = isDarkMode ? 'Modo Claro' : 'Modo Oscuro';
+            addAlertToLog(`Mapa cambiado a modo ${isDarkMode ? 'oscuro' : 'claro'}`);
+        }
+
+        async function updateLocationHistory(deviceId) {
+            if (!deviceId) {
+                console.log('No se proporcionó deviceId para actualizar el historial');
+                return;
+            }
+
+            try {
+                console.log(`Obteniendo historial para deviceId: ${deviceId}`);
+                const response = await fetch(`${apiBaseUrl}/api/locations?deviceId=${deviceId}`);
+                const locations = await response.json();
+                console.log('Datos del historial obtenidos:', locations);
+
+                const table = document.getElementById('locationHistoryTable');
+                table.innerHTML = '';
+
+                for (const loc of locations.slice(0, 10)) {
+                    console.log(`Procesando ubicación: lat=${loc.lat}, lng=${loc.lng}`);
+                    const placeName = await getPlaceName(loc.lat, loc.lng);
+                    const row = document.createElement('tr');
+                    const localTimestamp = new Date(loc.timestamp).toLocaleString('es-MX');
+                    row.innerHTML = `
+                        <td class="border-b py-1">${placeName}</td>
+                        <td class="border-b py-1">${loc.speed || 0} km/h</td>
+                        <td class="border-b py-1">${localTimestamp}</td>
+                    `;
+                    table.appendChild(row);
+                }
+            } catch (error) {
+                console.error('Error al cargar historial:', error);
+                addAlertToLog('Error al cargar el historial: ' + error.message);
+            }
+        }
+
+        function exportToCSV() {
+            if (!selectedDevice) {
+                alert('Selecciona un dispositivo primero');
+                return;
+            }
+            fetch(`${apiBaseUrl}/api/locations?deviceId=${selectedDevice}`)
+                .then(response => response.json())
+                .then(async locations => {
+                    const csvRows = ['Device ID,Ubicación,Velocidad,Fecha/Hora'];
+                    for (const loc of locations) {
+                        const placeName = await getPlaceName(loc.lat, loc.lng);
+                        csvRows.push(`${loc.device_id},"${placeName}",${loc.speed || 0},${new Date(loc.timestamp).toLocaleString('es-MX')}`);
+                    }
+                    const csv = csvRows.join('\n');
+                    const blob = new Blob([csv], { type: 'text/csv' });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `historial_${selectedDevice}_${new Date().toISOString().split('T')[0]}.csv`;
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    addAlertToLog(`Historial exportado para ${selectedDevice}`);
+                })
+                .catch(error => console.error('Error al exportar historial:', error));
+        }
+
+        function toggleRoutePanel() {
+            const panel = document.getElementById('routePanel');
+            panel.classList.toggle('active');
+            if (!panel.classList.contains('active')) {
+                document.getElementById('routeName').value = '';
+                const container = document.getElementById('destinationsContainer');
+                container.innerHTML = `
+                    <div class="destination-row mb-2">
+                        <input type="text" id="destination1" placeholder="Destino 1 (busca por nombre)" class="w-full p-2 mb-1 autocomplete" oninput="fetchSuggestions(this)">
+                        <div id="suggestions1" class="suggestions"></div>
+                        <button type="button" class="add-destination">Agregar Destino</button>
+                    </div>
+                `;
+                document.querySelectorAll('.add-destination').forEach(button => {
+                    button.removeEventListener('click', addDestinationInput);
+                    button.addEventListener('click', addDestinationInput);
+                });
+            }
+        }
+
+        async function fetchSuggestions(input) {
+            const inputValue = input.value.trim();
+            const suggestionBoxId = `suggestions${input.id.replace('destination', '')}`;
+            const suggestionBox = document.getElementById(suggestionBoxId);
+            if (!inputValue) {
+                suggestionBox.style.display = 'none';
+                return;
+            }
+
+            try {
+                const response = await fetch(`https://places.googleapis.com/v1/places:autocomplete`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Goog-Api-Key': 'AIzaSyD-jiDxqTS_5ey5hr9WdaUO3AJ0Q4N_-MM',
+                        'X-Goog-FieldMask': 'suggestions.placePrediction.placeId,suggestions.placePrediction.text'
+                    },
+                    body: JSON.stringify({
+                        input: inputValue,
+                        languageCode: 'es'
+                    })
+                });
+                const data = await response.json();
+                if (data.suggestions) {
+                    suggestionBox.innerHTML = data.suggestions.map(suggestion => `
+                        <div class="p-2 hover:bg-gray-200 cursor-pointer" onclick="selectSuggestion('${input.id}', '${suggestion.placePrediction.text.text}', '${suggestionBoxId}', '${suggestion.placePrediction.placeId}')">
+                            ${suggestion.placePrediction.text.text}
+                        </div>
+                    `).join('');
+                    suggestionBox.style.display = 'block';
+                } else {
+                    suggestionBox.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Error fetching suggestions:', error);
+                suggestionBox.style.display = 'none';
+            }
+        }
+
+        function selectSuggestion(inputId, text, suggestionBoxId, placeId) {
+            const input = document.getElementById(inputId);
+            input.value = text;
+            const suggestionBox = document.getElementById(suggestionBoxId);
+            suggestionBox.style.display = 'none';
+
+            fetch(`https://maps.googleapis.com/maps/api/geocode/json?place_id=${placeId}&key=AIzaSyD-jiDxqTS_5ey5hr9WdaUO3AJ0Q4N_-MM`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.results && data.results.length > 0) {
+                        const location = data.results[0].geometry.location;
+                        input.dataset.lat = location.lat;
+                        input.dataset.lng = location.lng;
+                    }
+                })
+                .catch(error => console.error('Error fetching coordinates:', error));
+        }
+
+        function addDestinationInput() {
+            const container = document.getElementById('destinationsContainer');
+            const index = container.getElementsByClassName('destination-row').length + 1;
+            const newRow = document.createElement('div');
+            newRow.className = 'destination-row mb-2';
+            newRow.innerHTML = `
+                <input type="text" id="destination${index}" placeholder="Destino ${index} (busca por nombre)" class="w-full p-2 mb-1 autocomplete" oninput="fetchSuggestions(this)">
+                <div id="suggestions${index}" class="suggestions"></div>
+                <button type="button" class="remove-destination">Eliminar</button>
+            `;
+            container.appendChild(newRow);
+            newRow.querySelector('.remove-destination').addEventListener('click', () => newRow.remove());
+        }
+
+        function saveRoute() {
+            const deviceId = document.getElementById('routeDeviceSelect').value;
+            const routeName = document.getElementById('routeName').value.trim();
+            if (!deviceId || !routeName) {
+                alert('Seleccione un chofer y un nombre para la ruta');
+                return;
+            }
+
+            const destinations = [];
+            document.querySelectorAll('[id^="destination"]').forEach(input => {
+                const lat = parseFloat(input.dataset.lat);
+                const lng = parseFloat(input.dataset.lng);
+                if (!isNaN(lat) && !isNaN(lng)) destinations.push({ lat, lng });
+            });
+
+            if (destinations.length < 1) {
+                alert('Agregue al menos un destino válido');
+                return;
+            }
+
+            currentDestinations[deviceId] = destinations;
+            fetch(`${apiBaseUrl}/api/assignRoute`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ deviceId, routeName, destinations })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    plotRoute(deviceId, destinations);
+                    addAlertToLog(`Ruta "${routeName}" asignada a ${deviceNames[deviceId]} (${deviceId})`);
+                    toggleRoutePanel();
+                }
+            })
+            .catch(error => console.error('Error al guardar la ruta:', error));
+        }
+
+        function loadExistingRoutes(deviceId) {
+            if (!deviceId) return;
+            fetch(`${apiBaseUrl}/api/routes?deviceId=${deviceId}`)
+                .then(response => response.json())
+                .then(destinations => {
+                    if (destinations.length > 0) {
+                        currentDestinations[deviceId] = destinations;
+                        plotRoute(deviceId, destinations);
+                    }
+                })
+                .catch(error => console.error('Error al cargar rutas:', error));
+        }
+
+        function plotRoute(deviceId, destinations) {
+            if (directionsRenderer.getMap()) directionsRenderer.setMap(null);
+
+            const waypoints = destinations.slice(1, -1).map(dest => ({
+                location: { lat: dest.lat, lng: dest.lng },
+                stopover: true
+            }));
+
+            directionsService.route({
+                origin: destinations[0],
+                destination: destinations[destinations.length - 1],
+                waypoints: waypoints,
+                optimizeWaypoints: true,
+                travelMode: google.maps.TravelMode.DRIVING
+            }, (response, status) => {
+                if (status === 'OK') {
+                    directionsRenderer.setMap(map);
+                    directionsRenderer.setDirections(response);
+                    plotDestinationMarkers(deviceId, destinations);
+                } else {
+                    console.error('Error al trazar la ruta:', status);
+                }
+            });
+        }
+
+        function plotDestinationMarkers(deviceId, destinations) {
+            if (destinationMarkers[deviceId]) destinationMarkers[deviceId].forEach(marker => marker.setMap(null));
+            destinationMarkers[deviceId] = [];
+
+            destinations.forEach((dest, index) => {
+                const marker = new google.maps.Marker({
+                    position: dest,
+                    map: map,
+                    title: `Destino ${index + 1}`,
+                    icon: {
+                        path: google.maps.SymbolPath.CIRCLE,
+                        scale: 8,
+                        fillColor: '#FF0000',
+                        fillOpacity: 1,
+                        strokeWeight: 1,
+                        strokeColor: '#FFFFFF'
+                    }
+                });
+                destinationMarkers[deviceId].push(marker);
+            });
+        }
+
+        function checkDestinationReached(deviceId, lat, lng) {
+            if (!currentDestinations[deviceId] || !destinationMarkers[deviceId]) return;
+
+            const currentPosition = new google.maps.LatLng(lat, lng);
+            currentDestinations[deviceId].forEach((dest, index) => {
+                const destPosition = new google.maps.LatLng(dest.lat, dest.lng);
+                const distance = google.maps.geometry.spherical.computeDistanceBetween(currentPosition, destPosition);
+                if (distance < 50 && destinationMarkers[deviceId][index].getIcon().fillColor !== '#00FF00') {
+                    destinationMarkers[deviceId][index].setIcon({
+                        path: google.maps.SymbolPath.CIRCLE,
+                        scale: 8,
+                        fillColor: '#00FF00',
+                        fillOpacity: 1,
+                        strokeWeight: 1,
+                        strokeColor: '#FFFFFF'
+                    });
+                    addAlertToLog(`Destino ${index + 1} alcanzado por ${deviceNames[deviceId]} (${deviceId})`);
+                }
+            });
+        }
+
+        document.getElementById('toggleHistoryBtn').addEventListener('click', () => {
+            const historyPanel = document.getElementById('location-history');
+            const toggleBtn = document.getElementById('toggleHistoryBtn');
+            historyPanel.classList.toggle('hidden');
+            toggleBtn.textContent = historyPanel.classList.contains('hidden') ? 'Mostrar Historial' : 'Ocultar Historial';
+        });
+
+        document.getElementById('toggleAlertLogBtn').addEventListener('click', () => {
+            const alertLog = document.getElementById('alert-log');
+            const toggleBtn = document.getElementById('toggleAlertLogBtn');
+            alertLog.classList.toggle('hidden');
+            toggleBtn.textContent = alertLog.classList.contains('hidden') ? 'Mostrar Alertas' : 'Ocultar Alertas';
+        });
+
+        initMap();
+    </script>
+</body>
+</html>
