@@ -55,11 +55,11 @@ rastreo-js/
 
 1. Clonar el repositorio:
 ```bash
-git clone https://github.com/tuusuario/rastreo-js.git
+git clone https://github.com/isairey/SisRastreoM.git
 ```
 Acceder al proyecto:
 ```
-cd rastreo-js
+cd SisRastreoM
 ```
 Abrir en el navegador:
 ```
